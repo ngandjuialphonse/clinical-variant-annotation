@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical Genomics Report - {{ patient.patient_id }}</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+            background-color: #f5f5f5;
+        }
+        
+        .report-container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            border-bottom: 3px solid #2c5282;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c5282;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .header-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 14px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            color: #2c5282;
+            font-size: 18px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .summary-box {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .summary-item.pathogenic {
+            background: #fed7d7;
+            border-left: 4px solid #c53030;
+        }
+        
+        .summary-item.likely-pathogenic {
+            background: #feebc8;
+            border-left: 4px solid #dd6b20;
+        }
+        
+        .summary-item.vus {
+            background: #bee3f8;
+            border-left: 4px solid #3182ce;
+        }
+        
+        .summary-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        .summary-label {
+            font-size: 12px;
+            color: #718096;
+            text-transform: uppercase;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        tr:hover {
+            background: #f7fafc;
+        }
+        
+        .interpretation {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #2c5282;
+        }
+        
+        .recommendations ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .recommendations li {
+            padding: 10px 0 10px 30px;
+            position: relative;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .recommendations li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #2c5282;
+            font-weight: bold;
+        }
+        
+        .disclaimer {
+            background: #fffaf0;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #f6ad55;
+            font-size: 13px;
+            margin-top: 30px;
+        }
+        
+        .disclaimer h3 {
+            color: #c05621;
+            margin-bottom: 10px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 12px;
+            color: #718096;
+            text-align: center;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .report-container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div class="header">
+            <h1>Clinical Genomics Report</h1>
+            <div class="header-info">
+                <div>
+                    <strong>Patient:</strong> {{ patient.full_name }}<br>
+                    <strong>DOB:</strong> {{ patient.date_of_birth }}<br>
+                    <strong>MRN:</strong> {{ patient.mrn }}
+                </div>
+                <div>
+                    <strong>Test:</strong> {{ test.test_name }}<br>
+                    <strong>Accession:</strong> {{ test.accession_number }}<br>
+                    <strong>Report Date:</strong> {{ test.report_date }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 class="section-title">Results Summary</h2>
+            <div class="summary-box">
+                <div class="summary-item pathogenic">
+                    <div class="summary-number">{{ pathogenic_count }}</div>
+                    <div class="summary-label">Pathogenic</div>
+                </div>
+                <div class="summary-item likely-pathogenic">
+                    <div class="summary-number">{{ likely_pathogenic_count }}</div>
+                    <div class="summary-label">Likely Pathogenic</div>
+                </div>
+                <div class="summary-item vus">
+                    <div class="summary-number">{{ vus_count }}</div>
+                    <div class="summary-label">VUS</div>
+                </div>
+            </div>
+        </div>
+        
+        {% if pathogenic_variants %}
+        <div class="section">
+            <h2 class="section-title">Pathogenic Variants</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Gene</th>
+                        <th>Variant</th>
+                        <th>Protein Change</th>
+                        <th>Zygosity</th>
+                        <th>Condition</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for variant in pathogenic_variants %}
+                    <tr>
+                        <td>{{ variant.gene }}</td>
+                        <td>{{ variant.variant }}</td>
+                        <td>{{ variant.protein_change }}</td>
+                        <td>{{ variant.zygosity }}</td>
+                        <td>{{ variant.condition }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        {% if likely_pathogenic_variants %}
+        <div class="section">
+            <h2 class="section-title">Likely Pathogenic Variants</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Gene</th>
+                        <th>Variant</th>
+                        <th>Protein Change</th>
+                        <th>Zygosity</th>
+                        <th>Condition</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for variant in likely_pathogenic_variants %}
+                    <tr>
+                        <td>{{ variant.gene }}</td>
+                        <td>{{ variant.variant }}</td>
+                        <td>{{ variant.protein_change }}</td>
+                        <td>{{ variant.zygosity }}</td>
+                        <td>{{ variant.condition }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        {% if vus_variants %}
+        <div class="section">
+            <h2 class="section-title">Variants of Uncertain Significance</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Gene</th>
+                        <th>Variant</th>
+                        <th>Protein Change</th>
+                        <th>Zygosity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for variant in vus_variants %}
+                    <tr>
+                        <td>{{ variant.gene }}</td>
+                        <td>{{ variant.variant }}</td>
+                        <td>{{ variant.protein_change }}</td>
+                        <td>{{ variant.zygosity }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        <div class="section">
+            <h2 class="section-title">Interpretation</h2>
+            <div class="interpretation">
+                {{ interpretation }}
+            </div>
+        </div>
+        
+        <div class="section recommendations">
+            <h2 class="section-title">Recommendations</h2>
+            <ul>
+                {% for rec in recommendations %}
+                <li>{{ rec }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="disclaimer">
+            <h3>Disclaimer</h3>
+            <p>
+                This test was developed and its performance characteristics determined by 
+                {{ test.lab_name }}. It has not been cleared or approved by the U.S. Food 
+                and Drug Administration. This report is intended for use by qualified healthcare 
+                professionals and should be interpreted in the context of the patient's clinical 
+                presentation and family history.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Report generated: {{ generated_at }}</p>
+            <p>{{ test.lab_name }} | CLIA: {{ test.clia_number }}</p>
+        </div>
+    </div>
+</body>
+</html>
